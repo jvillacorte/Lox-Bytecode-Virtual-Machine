@@ -1,0 +1,45 @@
+#ifndef CLOX_CHUNK_H
+#define CLOX_CHUNK_H
+
+#include <stdint.h>
+#include "value.h"
+
+//Bytecode instructions
+typedef enum
+{
+    OP_CONSTANT,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_NEGATE,
+    OP_PRINT,
+    OP_RETURN
+} OpCode;
+
+//Chunk holds bytecode and constants
+typedef struct
+{
+    int count;
+    int capacity;
+    uint8_t* code;
+
+    int constantsCount;
+    int constantsCapacity;
+    Value* constants;
+
+} Chunk;
+
+//Initialize chunk
+void initChunk(Chunk* chunk);
+
+//Write byte to chunk
+void writeChunk(Chunk* chunk, uint8_t byte);
+
+//Add constant to pool
+int addConstant(Chunk* chunk, Value value);
+
+//Free memory
+void freeChunk(Chunk* chunk);
+
+#endif
