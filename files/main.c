@@ -1,49 +1,92 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include "chunk.h"
-#include "debug.h"
 #include "vm.h"
 
+//Read file into memory
+static char* readFile(const char* path)
+{
+    FILE* file = fopen(path, "rb");
+
+    if (file == NULL)
+    {
+        fprintf(stderr, "Could not open file \"%s\".\n", path);
+        exit(74);
+    }
+
+    fseek(file, 0L, SEEK_END);
+    size_t fileSize = ftell(file);
+    rewind(file);
+
+    char* buffer = (char*)malloc(fileSize + 1);
+
+    if (buffer == NULL)
+    {
+        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        exit(74);
+    }
+
+    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+
+    if (bytesRead < fileSize)
+    {
+        fprintf(stderr, "Could not read file \"%s\".\n", path);
+        exit(74);
+    }
+
+    buffer[bytesRead] = '\0';
+
+    fclose(file);
+    return buffer;
+}
+
+//Print usage message
+static void usage()
+{
+    fprintf(stderr, "Usage: clox [-d] script.lox\n");
+    exit(64);
+}
+
+//Program entry
 int main(int argc, const char* argv[])
 {
     int debugMode = 0;
+    const char* path = NULL;
 
-    //Check debug flag
-    if (argc > 1 && strcmp(argv[1], "-d") == 0)
+    if (argc == 2)
+    {
+        path = argv[1];
+    }
+    else if (argc == 3 && strcmp(argv[1], "-d") == 0)
     {
         debugMode = 1;
-    }
-
-    Chunk chunk;
-    initChunk(&chunk);
-
-    //Load constants
-    int constantA = addConstant(&chunk, 15.5);
-    writeChunk(&chunk, OP_CONSTANT);
-    writeChunk(&chunk, constantA);
-
-    int constantB = addConstant(&chunk, 10);
-    writeChunk(&chunk, OP_CONSTANT);
-    writeChunk(&chunk, constantB);
-
-    //Add and print
-    writeChunk(&chunk, OP_ADD);
-    writeChunk(&chunk, OP_PRINT);
-    writeChunk(&chunk, OP_RETURN);
-
-    if (debugMode)
-    {
-        disassembleChunk(&chunk, "test.lox");
+        path = argv[2];
     }
     else
     {
-        VM vm;
-        initVM(&vm);
-        interpret(&vm, &chunk);
-        freeVM(&vm);
+        usage();
     }
 
-    freeChunk(&chunk);
+    char* source = readFile(path);
+
+    VM vm;
+    initVM(&vm);
+
+    InterpretResult result = interpret(&vm, source, debugMode);
+
+    freeVM(&vm);
+    free(source);
+
+    if (result == INTERPRET_COMPILE_ERROR)
+    {
+        return 65;
+    }
+
+    if (result == INTERPRET_RUNTIME_ERROR)
+    {
+        return 70;
+    }
+
     return 0;
 }

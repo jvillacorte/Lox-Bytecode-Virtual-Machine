@@ -20,6 +20,7 @@ typedef struct
 typedef enum
 {
     INTERPRET_OK,
+    INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
@@ -29,7 +30,7 @@ void initVM(VM* vm);
 //Free VM
 void freeVM(VM* vm);
 
-//Run chunk
-InterpretResult interpret(VM* vm, Chunk* chunk);
+//Run source code
+InterpretResult interpret(VM* vm, const char* source, int debugMode);
 
 #endif

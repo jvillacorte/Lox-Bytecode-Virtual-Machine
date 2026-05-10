@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "vm.h"
 #include "value.h"
+#include "compiler.h"
+#include "debug.h"
 
 //Reset stack pointer
 static void resetStack(VM* vm)
@@ -96,11 +98,30 @@ static InterpretResult run(VM* vm)
 #undef BINARY_OP
 }
 
-//Start execution
-InterpretResult interpret(VM* vm, Chunk* chunk)
+//Compile and run source
+InterpretResult interpret(VM* vm, const char* source, int debugMode)
 {
-    vm->chunk = chunk;
+    Chunk chunk;
+    initChunk(&chunk);
+
+    if (!compile(source, &chunk))
+    {
+        freeChunk(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    if (debugMode)
+    {
+        disassembleChunk(&chunk, "script");
+        freeChunk(&chunk);
+        return INTERPRET_OK;
+    }
+
+    vm->chunk = &chunk;
     vm->ip = vm->chunk->code;
 
-    return run(vm);
+    InterpretResult result = run(vm);
+
+    freeChunk(&chunk);
+    return result;
 }
