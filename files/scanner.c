@@ -152,11 +152,29 @@ static TokenType identifierType()
 {
     switch (scanner.start[0])
     {
+        case 'a':
+            return checkKeyword(1, 2, "nd", TOKEN_AND);
+
+        case 'f':
+            return checkKeyword(1, 4, "alse", TOKEN_FALSE);
+
+        case 'n':
+            return checkKeyword(1, 2, "il", TOKEN_NIL);
+
+        case 'o':
+            return checkKeyword(1, 1, "r", TOKEN_OR);
+
         case 'p':
             return checkKeyword(1, 4, "rint", TOKEN_PRINT);
+
+        case 't':
+            return checkKeyword(1, 3, "rue", TOKEN_TRUE);
+
+        case 'v':
+            return checkKeyword(1, 2, "ar", TOKEN_VAR);
     }
 
-    return TOKEN_ERROR;
+    return TOKEN_IDENTIFIER;
 }
 
 //Scan identifier
@@ -167,14 +185,24 @@ static Token identifier()
         advance();
     }
 
-    TokenType type = identifierType();
+    return makeToken(identifierType());
+}
 
-    if (type == TOKEN_ERROR)
+//Match expected character
+static int match(char expected)
+{
+    if (isAtEnd())
     {
-        return errorToken("Unexpected identifier.");
+        return 0;
     }
 
-    return makeToken(type);
+    if (*scanner.current != expected)
+    {
+        return 0;
+    }
+
+    scanner.current++;
+    return 1;
 }
 
 //Scan next token
@@ -223,6 +251,18 @@ Token scanToken()
 
         case ';':
             return makeToken(TOKEN_SEMICOLON);
+
+        case '!':
+            return makeToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
+
+        case '=':
+            return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+
+        case '<':
+            return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+
+        case '>':
+            return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
     }
 
     return errorToken("Unexpected character.");

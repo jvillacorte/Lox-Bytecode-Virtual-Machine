@@ -4,6 +4,14 @@
 #include "chunk.h"
 
 #define STACK_MAX 256
+#define GLOBAL_MAX 256
+
+//Global variable entry
+typedef struct
+{
+    char* name;
+    Value value;
+} Global;
 
 //Virtual Machine structure
 typedef struct
@@ -13,6 +21,9 @@ typedef struct
 
     Value stack[STACK_MAX];
     Value* stackTop;
+
+    Global globals[GLOBAL_MAX];
+    int globalCount;
 
 } VM;
 

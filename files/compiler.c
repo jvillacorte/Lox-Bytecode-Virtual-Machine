@@ -130,6 +130,12 @@ static void emitConstant(Value value)
     emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
+//Make identifier constant
+static uint8_t identifierConstant(Token* name)
+{
+    return makeConstant(stringValue(name->start, name->length));
+}
+
 //Forward declarations
 static void expression();
 static void statement();
@@ -140,11 +146,34 @@ static void primary()
 {
     switch (parser.current.type)
     {
+        case TOKEN_FALSE:
+            advanceParser();
+            emitByte(OP_FALSE);
+            return;
+
+        case TOKEN_TRUE:
+            advanceParser();
+            emitByte(OP_TRUE);
+            return;
+
+        case TOKEN_NIL:
+            advanceParser();
+            emitByte(OP_NIL);
+            return;
+
         case TOKEN_NUMBER:
         {
             advanceParser();
             double value = strtod(parser.previous.start, NULL);
-            emitConstant(value);
+            emitConstant(numberValue(value));
+            return;
+        }
+
+        case TOKEN_IDENTIFIER:
+        {
+            advanceParser();
+            uint8_t name = identifierConstant(&parser.previous);
+            emitBytes(OP_GET_GLOBAL, name);
             return;
         }
 
@@ -166,6 +195,14 @@ static void primary()
 //Compile unary expression
 static void unary()
 {
+    if (parser.current.type == TOKEN_BANG)
+    {
+        advanceParser();
+        unary();
+        emitByte(OP_NOT);
+        return;
+    }
+
     if (parser.current.type == TOKEN_MINUS)
     {
         advanceParser();
@@ -235,10 +272,129 @@ static void term()
     }
 }
 
+//Compile comparison expression
+static void comparison()
+{
+    term();
+
+    while (parser.current.type == TOKEN_GREATER ||
+           parser.current.type == TOKEN_GREATER_EQUAL ||
+           parser.current.type == TOKEN_LESS ||
+           parser.current.type == TOKEN_LESS_EQUAL)
+    {
+        TokenType operatorType = parser.current.type;
+        advanceParser();
+
+        term();
+
+        switch (operatorType)
+        {
+            case TOKEN_GREATER:
+                emitByte(OP_GREATER);
+                break;
+
+            case TOKEN_GREATER_EQUAL:
+                emitByte(OP_LESS);
+                emitByte(OP_NOT);
+                break;
+
+            case TOKEN_LESS:
+                emitByte(OP_LESS);
+                break;
+
+            case TOKEN_LESS_EQUAL:
+                emitByte(OP_GREATER);
+                emitByte(OP_NOT);
+                break;
+
+            default:
+                return;
+        }
+    }
+}
+
+//Compile equality expression
+static void equality()
+{
+    comparison();
+
+    while (parser.current.type == TOKEN_BANG_EQUAL ||
+           parser.current.type == TOKEN_EQUAL_EQUAL)
+    {
+        TokenType operatorType = parser.current.type;
+        advanceParser();
+
+        comparison();
+
+        switch (operatorType)
+        {
+            case TOKEN_BANG_EQUAL:
+                emitByte(OP_EQUAL);
+                emitByte(OP_NOT);
+                break;
+
+            case TOKEN_EQUAL_EQUAL:
+                emitByte(OP_EQUAL);
+                break;
+
+            default:
+                return;
+        }
+    }
+}
+
+//Compile and expression
+static void logicAnd()
+{
+    equality();
+
+    while (parser.current.type == TOKEN_AND)
+    {
+        advanceParser();
+        equality();
+        emitByte(OP_AND);
+    }
+}
+
+//Compile or expression
+static void logicOr()
+{
+    logicAnd();
+
+    while (parser.current.type == TOKEN_OR)
+    {
+        advanceParser();
+        logicAnd();
+        emitByte(OP_OR);
+    }
+}
+
 //Compile expression
 static void expression()
 {
-    term();
+    logicOr();
+}
+
+//Compile variable declaration
+static void varDeclaration()
+{
+    consume(TOKEN_IDENTIFIER, "Expect variable name.");
+
+    Token nameToken = parser.previous;
+    uint8_t global = identifierConstant(&nameToken);
+
+    if (parser.current.type == TOKEN_EQUAL)
+    {
+        advanceParser();
+        expression();
+    }
+    else
+    {
+        emitByte(OP_NIL);
+    }
+
+    consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+    emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
 //Compile print statement
@@ -249,6 +405,20 @@ static void printStatement()
     emitByte(OP_PRINT);
 }
 
+//Compile assignment statement
+static void assignmentStatement()
+{
+    Token nameToken = parser.current;
+    advanceParser();
+
+    consume(TOKEN_EQUAL, "Expect '=' after variable name.");
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after assignment.");
+
+    uint8_t global = identifierConstant(&nameToken);
+    emitBytes(OP_SET_GLOBAL, global);
+}
+
 //Compile statement
 static void statement()
 {
@@ -256,6 +426,10 @@ static void statement()
     {
         advanceParser();
         printStatement();
+    }
+    else if (parser.current.type == TOKEN_IDENTIFIER)
+    {
+        assignmentStatement();
     }
     else
     {
@@ -267,7 +441,17 @@ static void statement()
 //Compile declaration
 static void declaration()
 {
-    statement();
+    if (parser.current.type == TOKEN_VAR)
+    {
+        advanceParser();
+        varDeclaration();
+    }
+    else
+    {
+        statement();
+    }
+
+    parser.panicMode = 0;
 }
 
 //Compile source
