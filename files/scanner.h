@@ -33,8 +33,15 @@ typedef enum
     TOKEN_TRUE,
     TOKEN_VAR,
 
+    TOKEN_LEFT_BRACE,
+    TOKEN_RIGHT_BRACE,
+    TOKEN_ELSE,
+    TOKEN_IF,
+    TOKEN_WHILE,
+
     TOKEN_ERROR,
     TOKEN_EOF
+    
 } TokenType;
 
 //Token structure

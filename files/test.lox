@@ -1,25 +1,9 @@
-print true;
-print false;
-print nil;
+var x = 0;
 
-print 5 > 3;
-print 5 < 3;
-print 5 >= 5;
-print 4 <= 3;
-print 5 == 5;
-print 5 != 3;
+while (x < 1000)
+{
+    print x;
+    x = x + 1;
+}
 
-print !true;
-print !false;
-print true and false;
-print true or false;
-
-var x = 10;
-var y = 20;
-
-print x < y;
-print x == y;
-print x != y;
-
-var result = x < y and true;
-print result;
+print x;

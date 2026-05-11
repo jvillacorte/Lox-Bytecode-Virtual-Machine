@@ -110,6 +110,46 @@ static void emitReturn()
     emitByte(OP_RETURN);
 }
 
+//Emit jump instruction
+static int emitJump(uint8_t instruction)
+{
+    emitByte(instruction);
+    emitByte(0xff);
+    emitByte(0xff);
+
+    return currentChunk()->count - 2;
+}
+
+//Patch jump location
+static void patchJump(int offset)
+{
+    int jump = currentChunk()->count - offset - 2;
+
+    if (jump > 65535)
+    {
+        error("Too much code to jump over.");
+    }
+
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = jump & 0xff;
+}
+
+//Emit loop jump
+static void emitLoop(int loopStart)
+{
+    emitByte(OP_LOOP);
+
+    int offset = currentChunk()->count - loopStart + 2;
+
+    if (offset > 65535)
+    {
+        error("Loop body too large.");
+    }
+
+    emitByte((offset >> 8) & 0xff);
+    emitByte(offset & 0xff);
+}
+
 //Add constant
 static uint8_t makeConstant(Value value)
 {
@@ -140,6 +180,7 @@ static uint8_t identifierConstant(Token* name)
 static void expression();
 static void statement();
 static void declaration();
+static void block();
 
 //Compile primary expression
 static void primary()
@@ -419,6 +460,64 @@ static void assignmentStatement()
     emitBytes(OP_SET_GLOBAL, global);
 }
 
+//Compile block
+static void block()
+{
+    while (parser.current.type != TOKEN_RIGHT_BRACE &&
+           parser.current.type != TOKEN_EOF)
+    {
+        declaration();
+    }
+
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
+//Compile if statement
+static void ifStatement()
+{
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+
+    statement();
+
+    int elseJump = emitJump(OP_JUMP);
+
+    patchJump(thenJump);
+    emitByte(OP_POP);
+
+    if (parser.current.type == TOKEN_ELSE)
+    {
+        advanceParser();
+        statement();
+    }
+
+    patchJump(elseJump);
+}
+
+//Compile while statement
+static void whileStatement()
+{
+    int loopStart = currentChunk()->count;
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+
+    statement();
+
+    emitLoop(loopStart);
+
+    patchJump(exitJump);
+    emitByte(OP_POP);
+}
+
 //Compile statement
 static void statement()
 {
@@ -426,6 +525,21 @@ static void statement()
     {
         advanceParser();
         printStatement();
+    }
+    else if (parser.current.type == TOKEN_IF)
+    {
+        advanceParser();
+        ifStatement();
+    }
+    else if (parser.current.type == TOKEN_WHILE)
+    {
+        advanceParser();
+        whileStatement();
+    }
+    else if (parser.current.type == TOKEN_LEFT_BRACE)
+    {
+        advanceParser();
+        block();
     }
     else if (parser.current.type == TOKEN_IDENTIFIER)
     {

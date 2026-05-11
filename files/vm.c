@@ -43,6 +43,12 @@ static Value pop(VM* vm)
     return *vm->stackTop;
 }
 
+//Peek stack value
+static Value peek(VM* vm, int distance)
+{
+    return vm->stackTop[-1 - distance];
+}
+
 //Find global variable
 static int findGlobal(VM* vm, const char* name)
 {
@@ -109,6 +115,8 @@ static int checkNumbers(Value a, Value b)
 static InterpretResult run(VM* vm)
 {
 #define READ_BYTE() (*vm->ip++)
+#define READ_SHORT() \
+    (vm->ip += 2, (uint16_t)((vm->ip[-2] << 8) | vm->ip[-1]))
 #define READ_CONSTANT() (vm->chunk->constants[READ_BYTE()])
 
 #define BINARY_NUMBER_OP(op) \
@@ -270,6 +278,35 @@ static InterpretResult run(VM* vm)
                 vm->globals[index].value = copyValue(value);
                 break;
             }
+            case OP_POP:
+            pop(vm);
+            break;
+
+            case OP_JUMP:
+            {
+                uint16_t offset = READ_SHORT();
+                vm->ip += offset;
+                break;
+            }
+
+            case OP_JUMP_IF_FALSE:
+            {
+                uint16_t offset = READ_SHORT();
+
+                if (isFalsey(peek(vm, 0)))
+                {
+                    vm->ip += offset;
+                }
+
+                break;
+            }
+
+            case OP_LOOP:
+            {
+                uint16_t offset = READ_SHORT();
+                vm->ip -= offset;
+                break;
+            }
 
             case OP_RETURN:
                 return INTERPRET_OK;
@@ -280,6 +317,8 @@ static InterpretResult run(VM* vm)
 #undef READ_CONSTANT
 #undef BINARY_NUMBER_OP
 #undef BINARY_COMPARE_OP
+#undef READ_SHORT
+
 }
 
 //Compile and run source

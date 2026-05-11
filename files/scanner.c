@@ -172,6 +172,15 @@ static TokenType identifierType()
 
         case 'v':
             return checkKeyword(1, 2, "ar", TOKEN_VAR);
+
+        case 'e':
+            return checkKeyword(1, 3, "lse", TOKEN_ELSE);
+
+        case 'i':
+            return checkKeyword(1, 1, "f", TOKEN_IF);
+
+        case 'w':
+            return checkKeyword(1, 4, "hile", TOKEN_WHILE);
     }
 
     return TOKEN_IDENTIFIER;
@@ -263,6 +272,12 @@ Token scanToken()
 
         case '>':
             return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+
+        case '{':
+            return makeToken(TOKEN_LEFT_BRACE);
+
+        case '}':
+            return makeToken(TOKEN_RIGHT_BRACE);
     }
 
     return errorToken("Unexpected character.");
