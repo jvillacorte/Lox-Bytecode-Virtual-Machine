@@ -2,6 +2,7 @@
 #define CLOX_VM_H
 
 #include "chunk.h"
+#include "table.h"
 
 #define STACK_MAX 256
 #define GLOBAL_MAX 256
@@ -9,7 +10,7 @@
 //Global variable entry
 typedef struct
 {
-    char* name;
+    ObjString* name;
     Value value;
 } Global;
 
@@ -24,6 +25,8 @@ typedef struct
 
     Global globals[GLOBAL_MAX];
     int globalCount;
+
+    Table strings;
 
 } VM;
 
@@ -41,7 +44,10 @@ void initVM(VM* vm);
 //Free VM
 void freeVM(VM* vm);
 
+//Intern string
+ObjString* internString(VM* vm, const char* chars, int length);
+
 //Run source code
-InterpretResult interpret(VM* vm, const char* source, int debugMode);
+InterpretResult interpret(VM* vm, const char* source, const char* name, int debugMode);
 
 #endif

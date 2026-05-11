@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "value.h"
 
 //Create bool value
@@ -30,15 +28,11 @@ Value numberValue(double number)
 }
 
 //Create string value
-Value stringValue(const char* chars, int length)
+Value stringValue(ObjString* string)
 {
     Value value;
     value.type = VAL_STRING;
-
-    value.as.string = malloc(length + 1);
-    memcpy(value.as.string, chars, length);
-    value.as.string[length] = '\0';
-
+    value.as.string = string;
     return value;
 }
 
@@ -78,7 +72,7 @@ int valuesEqual(Value a, Value b)
             return a.as.number == b.as.number;
 
         case VAL_STRING:
-            return strcmp(a.as.string, b.as.string) == 0;
+            return a.as.string == b.as.string;
     }
 
     return 0;
@@ -102,16 +96,7 @@ void printValue(Value value)
             break;
 
         case VAL_STRING:
-            printf("%s", value.as.string);
+            printf("%s", value.as.string->chars);
             break;
-    }
-}
-
-//Free value if needed
-void freeValue(Value value)
-{
-    if (value.type == VAL_STRING)
-    {
-        free(value.as.string);
     }
 }

@@ -1,6 +1,8 @@
 #ifndef CLOX_VALUE_H
 #define CLOX_VALUE_H
 
+#include "object.h"
+
 //Value types
 typedef enum
 {
@@ -19,7 +21,7 @@ typedef struct
     {
         int boolean;
         double number;
-        char* string;
+        ObjString* string;
     } as;
 
 } Value;
@@ -34,7 +36,7 @@ Value nilValue();
 Value numberValue(double number);
 
 //Create string value
-Value stringValue(const char* chars, int length);
+Value stringValue(ObjString* string);
 
 //Check truthiness
 int isFalsey(Value value);
@@ -44,8 +46,5 @@ int valuesEqual(Value a, Value b);
 
 //Print value
 void printValue(Value value);
-
-//Free value if needed
-void freeValue(Value value);
 
 #endif

@@ -73,7 +73,7 @@ int main(int argc, const char* argv[])
     VM vm;
     initVM(&vm);
 
-    InterpretResult result = interpret(&vm, source, debugMode);
+    InterpretResult result = interpret(&vm, source, path, debugMode);
 
     freeVM(&vm);
     free(source);

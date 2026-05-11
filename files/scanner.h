@@ -23,6 +23,7 @@ typedef enum
     TOKEN_SEMICOLON,
 
     TOKEN_IDENTIFIER,
+    TOKEN_STRING,
     TOKEN_NUMBER,
 
     TOKEN_AND,
@@ -58,5 +59,8 @@ void initScanner(const char* source);
 
 //Get next token
 Token scanToken();
+
+//Peek next token without consuming it
+Token peekToken();
 
 #endif

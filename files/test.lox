@@ -1,9 +1,54 @@
-var x = 0;
+print "basic arithmetic";
+print 1 + 2 * 3;
 
-while (x < 1000)
+print "comparison";
+print 5 > 3;
+print 5 <= 3;
+print "cat" == "cat";
+print "cat" == "dog";
+
+print "globals and assignment";
+var x = 0;
+print x;
+x = x + 1;
+print x;
+
+print "local scope";
+var outer = "global";
 {
-    print x;
-    x = x + 1;
+    var outer = "local";
+    var y = 10;
+    print outer;
+    print y;
+    y = y + 5;
+    print y;
+}
+print outer;
+
+print "if else";
+if (x == 1)
+{
+    print "then";
+}
+else
+{
+    print "else";
 }
 
-print x;
+print "while";
+var i = 0;
+while (i < 3)
+{
+    print i;
+    i = i + 1;
+}
+
+print "short circuit";
+var s = 0;
+false and (s = 1);
+true or (s = 2);
+print s;
+true and (s = 3);
+print s;
+false or (s = 4);
+print s;

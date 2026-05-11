@@ -74,11 +74,6 @@ int addConstant(Chunk* chunk, Value value)
 //Free chunk memory
 void freeChunk(Chunk* chunk)
 {
-    for (int i = 0; i < chunk->constantsCount; i++)
-    {
-        freeValue(chunk->constants[i]);
-    }
-
     free(chunk->code);
     free(chunk->constants);
     initChunk(chunk);

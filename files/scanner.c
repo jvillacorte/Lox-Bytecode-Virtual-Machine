@@ -135,6 +135,28 @@ static Token number()
     return makeToken(TOKEN_NUMBER);
 }
 
+//Scan string
+static Token string()
+{
+    while (peek() != '"' && !isAtEnd())
+    {
+        if (peek() == '\n')
+        {
+            scanner.line++;
+        }
+
+        advance();
+    }
+
+    if (isAtEnd())
+    {
+        return errorToken("Unterminated string.");
+    }
+
+    advance();
+    return makeToken(TOKEN_STRING);
+}
+
 //Check keyword text
 static TokenType checkKeyword(int start, int length, const char* rest, TokenType type)
 {
@@ -144,7 +166,7 @@ static TokenType checkKeyword(int start, int length, const char* rest, TokenType
         return type;
     }
 
-    return TOKEN_ERROR;
+    return TOKEN_IDENTIFIER;
 }
 
 //Get identifier type
@@ -278,7 +300,18 @@ Token scanToken()
 
         case '}':
             return makeToken(TOKEN_RIGHT_BRACE);
+        case '"':
+            return string();
     }
 
     return errorToken("Unexpected character.");
+}
+
+//Peek next token without consuming it
+Token peekToken()
+{
+    Scanner saved = scanner;
+    Token token = scanToken();
+    scanner = saved;
+    return token;
 }

@@ -9,6 +9,15 @@ static int simpleInstruction(const char* name, int offset)
     return offset + 1;
 }
 
+
+//Byte instruction with one-byte operand
+static int byteInstruction(const char* name, Chunk* chunk, int offset)
+{
+    uint8_t slot = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
+}
+
 //Jump instruction
 static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset)
 {
@@ -63,6 +72,12 @@ int disassembleInstruction(Chunk* chunk, int offset)
 
         case OP_SET_GLOBAL:
             return constantInstruction("OP_SET_GLOBAL", chunk, offset);
+
+        case OP_GET_LOCAL:
+            return byteInstruction("OP_GET_LOCAL", chunk, offset);
+
+        case OP_SET_LOCAL:
+            return byteInstruction("OP_SET_LOCAL", chunk, offset);
 
         case OP_ADD:
             return simpleInstruction("OP_ADD", offset);

@@ -17,16 +17,35 @@ void initVM(VM* vm)
 {
     resetStack(vm);
     vm->globalCount = 0;
+    initTable(&vm->strings);
 }
 
 //Cleanup VM
 void freeVM(VM* vm)
 {
-    for (int i = 0; i < vm->globalCount; i++)
+    freeTable(&vm->strings);
+}
+
+//Intern string
+ObjString* internString(VM* vm, const char* chars, int length)
+{
+    uint32_t hash = hashString(chars, length);
+
+    ObjString* interned = tableFindString(&vm->strings, chars, length, hash);
+
+    if (interned != NULL)
     {
-        free(vm->globals[i].name);
-        freeValue(vm->globals[i].value);
+        return interned;
     }
+
+    char* heapChars = malloc(length + 1);
+    memcpy(heapChars, chars, length);
+    heapChars[length] = '\0';
+
+    ObjString* string = allocateString(heapChars, length, hash);
+    tableSet(&vm->strings, string);
+
+    return string;
 }
 
 //Push value
@@ -50,11 +69,11 @@ static Value peek(VM* vm, int distance)
 }
 
 //Find global variable
-static int findGlobal(VM* vm, const char* name)
+static int findGlobal(VM* vm, ObjString* name)
 {
     for (int i = 0; i < vm->globalCount; i++)
     {
-        if (strcmp(vm->globals[i].name, name) == 0)
+        if (vm->globals[i].name == name)
         {
             return i;
         }
@@ -63,26 +82,14 @@ static int findGlobal(VM* vm, const char* name)
     return -1;
 }
 
-//Copy value for storage
-static Value copyValue(Value value)
-{
-    if (value.type == VAL_STRING)
-    {
-        return stringValue(value.as.string, (int)strlen(value.as.string));
-    }
-
-    return value;
-}
-
 //Define global variable
-static void defineGlobal(VM* vm, const char* name, Value value)
+static void defineGlobal(VM* vm, ObjString* name, Value value)
 {
     int index = findGlobal(vm, name);
 
     if (index != -1)
     {
-        freeValue(vm->globals[index].value);
-        vm->globals[index].value = copyValue(value);
+        vm->globals[index].value = value;
         return;
     }
 
@@ -92,9 +99,8 @@ static void defineGlobal(VM* vm, const char* name, Value value)
         return;
     }
 
-    vm->globals[vm->globalCount].name = malloc(strlen(name) + 1);
-    strcpy(vm->globals[vm->globalCount].name, name);
-    vm->globals[vm->globalCount].value = copyValue(value);
+    vm->globals[vm->globalCount].name = name;
+    vm->globals[vm->globalCount].value = value;
     vm->globalCount++;
 }
 
@@ -238,6 +244,10 @@ static InterpretResult run(VM* vm)
                 printf("\n");
                 break;
 
+            case OP_POP:
+                pop(vm);
+                break;
+
             case OP_DEFINE_GLOBAL:
             {
                 Value name = READ_CONSTANT();
@@ -254,7 +264,7 @@ static InterpretResult run(VM* vm)
 
                 if (index == -1)
                 {
-                    fprintf(stderr, "Undefined variable '%s'.\n", name.as.string);
+                    fprintf(stderr, "Undefined variable '%s'.\n", name.as.string->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
@@ -269,18 +279,29 @@ static InterpretResult run(VM* vm)
 
                 if (index == -1)
                 {
-                    fprintf(stderr, "Undefined variable '%s'.\n", name.as.string);
+                    fprintf(stderr, "Undefined variable '%s'.\n", name.as.string->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
-                Value value = pop(vm);
-                freeValue(vm->globals[index].value);
-                vm->globals[index].value = copyValue(value);
+                Value value = peek(vm, 0);
+                vm->globals[index].value = value;
                 break;
             }
-            case OP_POP:
-            pop(vm);
-            break;
+
+
+            case OP_GET_LOCAL:
+            {
+                uint8_t slot = READ_BYTE();
+                push(vm, vm->stack[slot]);
+                break;
+            }
+
+            case OP_SET_LOCAL:
+            {
+                uint8_t slot = READ_BYTE();
+                vm->stack[slot] = peek(vm, 0);
+                break;
+            }
 
             case OP_JUMP:
             {
@@ -314,20 +335,19 @@ static InterpretResult run(VM* vm)
     }
 
 #undef READ_BYTE
+#undef READ_SHORT
 #undef READ_CONSTANT
 #undef BINARY_NUMBER_OP
 #undef BINARY_COMPARE_OP
-#undef READ_SHORT
-
 }
 
 //Compile and run source
-InterpretResult interpret(VM* vm, const char* source, int debugMode)
+InterpretResult interpret(VM* vm, const char* source, const char* name, int debugMode)
 {
     Chunk chunk;
     initChunk(&chunk);
 
-    if (!compile(source, &chunk))
+    if (!compile(source, &chunk, vm))
     {
         freeChunk(&chunk);
         return INTERPRET_COMPILE_ERROR;
@@ -335,7 +355,7 @@ InterpretResult interpret(VM* vm, const char* source, int debugMode)
 
     if (debugMode)
     {
-        disassembleChunk(&chunk, "script");
+        disassembleChunk(&chunk, name);
         freeChunk(&chunk);
         return INTERPRET_OK;
     }
